@@ -42,7 +42,9 @@ Skills 可以放在：
 
 ### 自动发现
 
-只要目录结构正确，Claude 就会自动发现这些 Skills。
+只要目录结构正确，Claude 就会自动发现这些 Skills，包括子目录中嵌套的 `.claude/skills/`。从 v2.1.178 起，同名 skill 出现在多个嵌套目录中时，**离当前工作目录最近的定义生效**——包级 skill 会覆盖仓库根目录的同名 skill。
+
+`/reload-skills` 命令（v2.1.152 新增）可以在不重启会话的情况下重新扫描所有 skill 目录；`SessionStart` hook 返回 `reloadSkills: true` 也能触发同样的重扫（见 [Hooks 中文指南](../06-hooks/README.md)）。
 
 ## 创建自定义 Skills
 
@@ -77,6 +79,7 @@ description: 这个 skill 的用途，以及什么时候触发
 
 - `argument-hint`
 - `allowed-tools`
+- `disallowed-tools`（v2.1.152 新增，在 skill 生效期间移除指定工具）
 - `model`
 - `disable-model-invocation`
 - `user-invocable`
@@ -100,7 +103,11 @@ description: 这个 skill 的用途，以及什么时候触发
 
 ## 字符串替换
 
-Skills 支持 `$ARGUMENTS`、`$0`、`$1` 等参数替换。
+Skills 支持 `$ARGUMENTS`、`$0`、`$1` 等参数替换。`${CLAUDE_PROJECT_DIR}` 变量会展开为项目根目录的绝对路径，可在 skill 正文和 `allowed-tools` 中使用（v2.1.196）。
+
+### 叠加调用 Skills
+
+可以在一次调用中叠加多个斜杠 skill，例如 `/code-review /fix-issue 123`。从 v2.1.199 起，开头的所有 skill（第一个加上最多 5 个）都会被加载，尾部参数（`123`）会传给每一个；此前只加载第一个。同一 skill 被重复调用时，相同内容会自动去重（v2.1.202），不会追加两次。
 
 ### 动态上下文注入
 
@@ -225,6 +232,7 @@ Skills 支持 `$ARGUMENTS`、`$0`、`$1` 等参数替换。
 - 不要在 skill 中硬编码密钥
 - 对副作用操作保持用户触发
 - 给自动触发的 skill 设置清晰边界
+- 如果内置 skills 对某个项目是干扰，可以用 `disableBundledSkills` 设置（v2.1.169 新增）或环境变量 `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS=1` 隐藏它们
 
 ## Skills vs 其他功能
 
@@ -237,7 +245,7 @@ Skills 支持 `$ARGUMENTS`、`$0`、`$1` 等参数替换。
 
 ## 内置 Skills
 
-Claude Code 自带一些 Skills，例如批处理、调试、简化和 Claude API 相关内容。
+Claude Code 自带一些 Skills，例如批处理、调试、代码审查、简化、数据可视化和 Claude API 相关内容。
 
 ## 共享 Skills
 

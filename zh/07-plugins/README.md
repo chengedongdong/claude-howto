@@ -45,6 +45,8 @@ graph TB
     A -->|打包| F
 ```
 
+> **无需市场（v2.1.157+）**：放在 `.claude/skills` 目录中的插件现在无需市场即可自动加载。用 `claude plugin init <name>` 可以快速搭建一个新插件。
+
 ## 插件类型与分发
 
 | 类型 | 范围 | 共享对象 | 维护者 | 示例 |
@@ -446,6 +448,7 @@ graph TB
 
 ### 额外的市场特性
 
+- **市场搜索栏（v2.1.172）**：在 `/plugin` 中浏览某个市场的插件时，搜索栏可以按名称或关键词过滤该市场的插件——对滚动完整列表很慢的大型市场非常方便
 - **默认 git 超时**：对大型插件仓库从 30 秒增加到 120 秒
 - **自定义 npm registry**：插件可以指定自定义 npm registry URL 用于依赖解析
 - **版本锁定**：将插件锁定到特定版本，以获得可复现的环境
@@ -489,6 +492,9 @@ graph TB
 | `plugins[].description` | 否 | 插件的简要描述 |
 | `plugins[].version` | 否 | 语义化版本字符串 |
 | `plugins[].author` | 否 | 插件作者名称 |
+| `plugins[].renames` | 否 | 将插件曾用 `name` 映射到当前名称（若已移除则为 `null`），让用户自动迁移（v2.1.193） |
+| `plugins[].displayName` | 否 | 在 UI 中显示的人类可读名称；不用于查找（v2.1.143） |
+| `plugins[].defaultEnabled` | 否 | 若为 `false`，插件安装后保持禁用，直到用户主动启用（v2.1.154） |
 
 ### 插件来源类型
 
@@ -504,6 +510,8 @@ graph TB
 | **pip** | `{ "source": "pip", "package": "..." }` | `{ "source": "pip", "package": "claude-data-plugin", "version": ">=1.0" }` |
 
 GitHub 和 git 来源支持可选的 `ref`（分支/标签）和 `sha`（提交哈希）字段用于版本锁定。
+
+保留的市场名称现在包括 `first-party-plugins` 和 `healthcare`（v2.1.205）——它们保留给官方使用，自定义市场不能占用。
 
 ### 分发方式
 
@@ -609,6 +617,16 @@ claude plugin install plugin-name@marketplace-name
 /plugin disable plugin-name
 ```
 
+`/plugin` 界面会显示未使用的插件，方便你清理（v2.1.187+）。当插件 `plugin.json` 中的 `name` 与其市场条目名称不一致时，启用/禁用同样可用（v2.1.195+）。
+
+### 列出已安装插件（v2.1.163）
+确认当前会话中哪些插件处于激活状态：
+```bash
+/plugin list             # 所有已安装插件
+/plugin list --enabled   # 仅已启用的插件
+/plugin list --disabled  # 仅已禁用的插件
+```
+
 ### 本地插件（用于开发）
 ```bash
 # 本地测试的 CLI 参数（可重复指定多个插件）
@@ -620,6 +638,8 @@ claude --plugin-dir ./plugin-a --plugin-dir ./plugin-b
 ```bash
 /plugin install github:username/repo
 ```
+
+> **远程会话插件加载（v2.1.179）**：v2.1.179 改进了远程会话中的插件加载性能，连接远程会话时插件可以更快就绪。
 
 ## 何时创建插件
 

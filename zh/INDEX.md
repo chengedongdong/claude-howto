@@ -60,7 +60,7 @@
 
 ---
 
-## 03. Skills（28 个文件）
+## 03. Skills（21 个文件）
 
 带脚本和模板的自动触发能力。
 
@@ -364,6 +364,7 @@ documentation/
 | `planning-mode-examples.md` | 规划示例 | REST API、数据库迁移、重构 |
 
 **扩展功能**：
+- Dynamic Workflows：通过 `/workflows` 实现确定性的多 agent 编排（v2.1.154），适用于全面审计、迁移、规模化扩展
 - Scheduled Tasks：使用 `/loop` 和 cron 工具的周期任务
 - Chrome Integration：通过无头 Chromium 做浏览器自动化
 - Remote Control（扩展版）：连接方式、安全性、对比表
@@ -387,8 +388,13 @@ documentation/
 - 并行开发工作流
 - 任务管理与监控
 
+#### Dynamic Workflows（v2.1.154）
+- 对数十到数百个后台 subagents 进行确定性编排
+- Fan-out / pipeline / 并行阶段，实现全面覆盖
+- 用 `/workflows` 查看运行；`/effort` 中的 `ultracode` 可在当前会话开启
+
 #### Permission Modes
-- **default**：风险操作需要审批
+- **manual**：风险操作需要审批（v2.1.200 起由 `default` 更名；`default` 仍可用）
 - **acceptEdits**：自动接受文件编辑，其他操作仍需审批
 - **plan**：只读分析，不做修改
 - **auto**：自动批准安全操作，风险操作仍提示
@@ -455,7 +461,7 @@ documentation/
 - `claude` - 启动交互式会话
 - `claude -p "prompt"` - 无头/非交互模式
 - `claude web` - 打开 Web 会话
-- `claude --model` - 选择模型（Sonnet 4.6、Opus 4.6）
+- `claude --model` - 选择模型（Sonnet 4.6、Opus 4.8、Haiku 4.5）
 - `claude --permission-mode` - 设置权限模式
 - `claude --remote` - 通过 WebSocket 启用远程控制
 
@@ -765,11 +771,11 @@ claude -p "Run tests and report results"
 |------|----------|--------|-----|-------|---------|-----------|------|--------|------|
 | **01 Slash Commands** | 8 | - | - | - | - | - | 1 | 1 | **10** |
 | **02 Memory** | - | - | - | - | - | 3 | 1 | 2 | **6** |
-| **03 Skills** | - | - | - | - | 5 | 9 | 1 | - | **28** |
+| **03 Skills** | - | - | - | - | 5 | 9 | 7 | - | **21** |
 | **04 Subagents** | - | 8 | - | - | - | - | 1 | - | **9** |
 | **05 MCP** | - | - | 4 | - | - | - | 1 | - | **5** |
 | **06 Hooks** | - | - | - | 8 | - | - | 1 | - | **9** |
-| **07 Plugins** | 11 | 9 | 3 | 3 | 3 | 3 | 4 | - | **40** |
+| **07 Plugins** | 11 | 9 | 3 | 3 | 3 | 3 | 7 | - | **39** |
 | **08 Checkpoints** | - | - | - | - | - | - | 1 | 1 | **2** |
 | **09 Advanced** | - | - | - | - | - | - | 1 | 2 | **3** |
 | **10 CLI** | - | - | - | - | - | - | 1 | - | **1** |
@@ -892,7 +898,7 @@ claude -p "Run tests and report results"
 
 ---
 
-**最后更新**：2026 年 3 月
+**最后更新**：2026 年 7 月 18 日
 **总示例数**：100+ 文件
 **分类数**：10 个功能
 **Hooks**：8 个自动化脚本

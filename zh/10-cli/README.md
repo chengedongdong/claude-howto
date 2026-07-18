@@ -36,12 +36,14 @@ graph TD
 | `claude -c -p "query"` | 在打印模式下继续会话 | `claude -c -p "检查类型错误"` |
 | `claude -r "<session>" "query"` | 通过 ID 或名称恢复会话 | `claude -r "auth-refactor" "完成这个 PR"` |
 | `claude update` | 更新到最新版本 | `claude update` |
-| `claude mcp` | 配置 MCP servers | 见 [MCP 文档](../05-mcp/README.md) |
+| `claude mcp` | 配置 MCP servers（含用于认证的 `login`/`logout`，v2.1.186+） | 见 [MCP 文档](../05-mcp/README.md) |
 | `claude mcp serve` | 将 Claude Code 作为 MCP server 运行 | `claude mcp serve` |
 | `claude agents` | 列出所有已配置的 subagents | `claude agents` |
 | `claude auto-mode defaults` | 以 JSON 打印 auto mode 默认规则 | `claude auto-mode defaults` |
+| `claude auto-mode reset` | 恢复 auto-mode 默认配置，带确认提示（`--yes` 可跳过）（v2.1.212） | `claude auto-mode reset --yes` |
 | `claude remote-control` | 启动远程控制服务 | `claude remote-control` |
 | `claude plugin` | 管理插件（安装、启用、禁用） | `claude plugin install my-plugin` |
+| `claude plugin init <name>` | 在 `.claude/skills` 中脚手架式创建新插件 — 无需 marketplace 即可自动加载（v2.1.157+） | `claude plugin init my-plugin` |
 | `claude auth login` | 登录（支持 `--email`、`--sso`） | `claude auth login --email user@example.com` |
 | `claude auth logout` | 注销当前账号 | `claude auth logout` |
 | `claude auth status` | 检查登录状态（已登录返回 0，否则返回 1） | `claude auth status` |
@@ -62,6 +64,7 @@ graph TD
 | `--teleport` | 将 web session 恢复到本地 | `claude --teleport` |
 | `--teammate-mode` | agent team 显示模式 | `claude --teammate-mode tmux` |
 | `--bare` | 极简模式，跳过 hooks、skills、plugins、MCP、自动记忆和 `CLAUDE.md` | `claude --bare` |
+| `--safe-mode` | 以禁用全部自定义项（CLAUDE.md、plugins、skills、hooks、MCP）的方式启动，用于隔离配置问题；也可用 `CLAUDE_CODE_SAFE_MODE=1`（v2.1.169） | `claude --safe-mode` |
 | `--enable-auto-mode` | 解锁 auto permission mode | `claude --enable-auto-mode` |
 | `--channels` | 订阅 MCP channel 插件 | `claude --channels discord,telegram` |
 | `--chrome` / `--no-chrome` | 启用 / 禁用 Chrome 浏览器集成 | `claude --chrome` |
@@ -107,7 +110,7 @@ claude -p "列出待办事项" | grep "URGENT"
 | 参数 | 说明 | 示例 |
 |------|-------------|---------|
 | `--model` | 设置模型（sonnet、opus、haiku，或完整模型名） | `claude --model opus` |
-| `--fallback-model` | 当前模型负载过高时自动切换的后备模型 | `claude -p --fallback-model sonnet "query"` |
+| `--fallback-model` | 主模型过载或不可用时自动切换的后备模型；可通过 `fallbackModel` 设置最多配置三个。自 v2.1.166 起也适用于交互式会话（此前仅限打印模式） | `claude -p --fallback-model sonnet "query"` |
 | `--agent` | 为当前会话指定 agent | `claude --agent my-custom-agent` |
 | `--agents` | 通过 JSON 定义自定义 subagents | 见 [Agents Configuration](#subagents-配置) |
 | `--effort` | 设置推理级别（low、medium、high、max） | `claude --effort high` |
@@ -115,7 +118,7 @@ claude -p "列出待办事项" | grep "URGENT"
 ### 模型选择示例
 
 ```bash
-# 复杂任务使用 Opus 4.6
+# 复杂任务使用 Opus 4.8
 claude --model opus "设计一个缓存策略"
 
 # 快速任务使用 Haiku 4.5
@@ -131,6 +134,8 @@ claude -p --model opus --fallback-model sonnet "分析架构"
 claude --model opusplan "设计并实现缓存层"
 ```
 
+> **组织默认模型（v2.1.196）**：当组织管理员设置了默认模型时，`/model` 会将其标注为 "Org default"（或 "Role default"）。
+
 ## 系统提示词自定义
 
 | 参数 | 说明 | 示例 |
@@ -138,6 +143,7 @@ claude --model opusplan "设计并实现缓存层"
 | `--system-prompt` | 替换整段默认系统提示词 | `claude --system-prompt "You are a Python expert"` |
 | `--system-prompt-file` | 从文件加载提示词（仅打印模式） | `claude -p --system-prompt-file ./prompt.txt "query"` |
 | `--append-system-prompt` | 在默认提示词后追加内容 | `claude --append-system-prompt "Always use TypeScript"` |
+| `--append-subagent-system-prompt` | 向每个 subagent 的系统提示词追加内容（非交互模式） | `claude -p --append-subagent-system-prompt "Cite sources" "query"` |
 
 ### 系统提示词示例
 
@@ -189,6 +195,8 @@ claude --allowedTools "Bash(git status:*)" "Bash(git log:*)"
 # 阻止危险操作
 claude --disallowedTools "Bash(rm -rf:*)" "Bash(git push --force:*)"
 ```
+
+> **参数匹配 `Tool(param:value)`（v2.1.178）**：权限规则的格式为 `Tool`（匹配该工具的所有使用）或 `Tool(specifier)`。自 v2.1.178 起，specifier 可以匹配工具的输入**参数**，而不仅是命令或路径模式 — 使用支持通配符的 `Tool(param:value)` 形式。这把你已经在 `Bash(...)` 命令前缀（如 `Bash(npm run test *)`）和 `Read(...)` 路径 glob（如 `Read(./.env.*)`）中使用的匹配方式推广到了其他工具，使它们也能按参数进行限定。编写规则前请先查阅 [permissions 参考](https://code.claude.com/docs/en/settings) 中各工具当前的示例字符串，因为具体参数名因工具而异。
 
 ## 输出与格式
 
@@ -297,6 +305,7 @@ claude --fork-session --session "experiment-a"
 | `--interactive` | 强制交互模式 | `claude --interactive` |
 | `--dry-run` | 仅模拟执行 | `claude --dry-run "review code"` |
 | `--unsafe` | 允许更多自动化操作 | `claude --unsafe` |
+| `--ax-screen-reader` | 面向屏幕阅读器的纯文本渲染模式（v2.1.208） | `claude --ax-screen-reader` |
 
 ### 高级示例
 
@@ -543,7 +552,7 @@ claude --model opusplan "design and implement the caching layer"
 claude --model haiku --effort low
 ```
 
-### Effort 级别（Opus 4.6）
+### Effort 级别（Opus 4.8 / Opus 4.7）
 
 ```bash
 # 通过 CLI 参数设置 effort
@@ -566,6 +575,38 @@ CLAUDE_EFFORT=medium claude --model opus
 | `CLAUDE_WORKING_DIRECTORY` | 默认工作目录 |
 | `CLAUDE_OUTPUT_FORMAT` | 默认输出格式 |
 | `CLAUDE_MCP_CONFIG` | 默认 MCP 配置 |
+| `CLAUDE_CODE_SAFE_MODE` | 设为 `1` 以在禁用全部自定义项（CLAUDE.md、plugins、skills、hooks、MCP）的情况下启动 — `--safe-mode` 的环境变量形式，用于隔离配置问题（v2.1.169） |
+| `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` | 设为 `1` 以对模型隐藏内置的 skills、workflows 和 commands（v2.1.169） |
+| `CLAUDE_CODE_DISABLE_MOUSE_CLICKS` | 在全屏模式下禁用鼠标点击/拖拽/悬停；滚轮滚动仍然可用（v2.1.195+） |
+| `CLAUDE_CODE_ENABLE_AUTO_MODE` | Bedrock、Vertex 和 Foundry 上 auto mode 的旧版启用开关（v2.1.158–v2.1.206）。自 v2.1.207 起，这些提供商上的 Sonnet 5、Opus 4.7/4.8 和 Fable 5 默认可用 auto mode — 出于兼容性该变量仍被接受，但不再生效 |
+| `CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION` | 每个会话 WebSearch 工具调用次数的上限，用于阻止失控的搜索循环。默认 200（v2.1.212） |
+| `CLAUDE_CODE_MAX_SUBAGENTS_PER_SESSION` | 每个会话 subagent 生成数量的上限，用于阻止失控的委派循环。默认 200；`/clear` 会重置该额度（v2.1.212） |
+| `CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS` | 长时间运行的 MCP 工具调用自动转入后台前的阈值（毫秒）。默认 120000（2 分钟）（v2.1.212） |
+| `CLAUDE_AX_SCREEN_READER` | 设为 `1` 以启用面向屏幕阅读器的纯文本渲染模式。效果等同于 `--ax-screen-reader` 或 settings 中的 `"axScreenReader": true`（v2.1.208） |
+| `CLAUDE_CLIENT_PRESENCE_FILE` | 指向一个标记文件，在你位于本机时抑制移动端推送通知（v2.1.181+）。注意：变量名是 `CLAUDE_CLIENT_PRESENCE_FILE`，而不是 `CLAUDE_CODE_CLIENT_PRESENCE_FILE`。 |
+| `CLAUDE_CODE_MAX_RETRIES` | API 重试的最大次数。自 v2.1.186 起上限为 15。 |
+| `CLAUDE_CODE_RETRY_WATCHDOG` | 推荐用于无人值守会话的重试控制，可替代调高 `CLAUDE_CODE_MAX_RETRIES`（v2.1.186+）。 |
+| `CLAUDE_ENABLE_STREAM_WATCHDOG` | 流式空闲看门狗（流事件停滞 5 分钟后中止/重试）默认对所有提供商开启；设为 `0` 可禁用（v2.1.196）。 |
+| `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT` | 覆盖远程 MCP 工具调用无响应挂起时的 5 分钟空闲中止时限（v2.1.187+）。 |
+
+## Settings.json 键
+
+这些键位于 `settings.json` 文件中（用户级为 `~/.claude/settings.json`，项目级为 `.claude/settings.json`），而不是作为标志或环境变量传入。下表覆盖几个新近加入的 UI/UX 键；托管的 `enforceAvailableModels` 键参见 [高级特性 → Managed Settings](../09-advanced-features/README.md#available-managed-settings)。
+
+| 键 | 说明 |
+|-----|------|
+| `respondToBashCommands` | （v2.1.186）自动响应 `!` bash 命令的输出。默认 `true`。设为 `false` 可回到仅注入上下文（v2.1.186 之前）的行为。参见 [高级特性 → Bash Mode](../09-advanced-features/README.md#bash-mode)。 |
+| `wheelScrollAccelerationEnabled` | （v2.1.174）设为 `false` 以在全屏渲染器中禁用鼠标滚轮滚动加速。适用于快速拨动滚轮容易滚过头的情况。 |
+| `footerLinksRegexes` | （v2.1.176）正则表达式数组，匹配到的链接会在页脚行渲染为徽标。可在用户或托管设置中配置。 |
+| `language` | 设置 Claude 首选的回复语言和语音听写语言（如 `"french"`、`"japanese"`）。自 **v2.1.176** 起还会固定自动生成会话标题所用的语言。 |
+
+```json
+{
+  "wheelScrollAccelerationEnabled": false,
+  "language": "french",
+  "footerLinksRegexes": ["https://jira\\.example\\.com/.*"]
+}
+```
 
 ## 快速参考
 

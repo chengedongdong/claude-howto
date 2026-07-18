@@ -65,6 +65,8 @@
 | `/sandbox` | 切换 sandbox 模式 | 安全执行命令 |
 | `/doctor` | 运行诊断 | 排查问题 |
 | `/reload-plugins` | 重新加载已安装的 plugins | 插件管理 |
+| `/reload-skills` | 无需重启即可重新扫描 skill 目录（v2.1.152） | Skill 管理 |
+| `/workflows` | 查看运行中和已完成的 dynamic workflow 运行（v2.1.154） | 多 agent 编排 |
 | `/release-notes` | 显示更新说明 | 查看新功能 |
 | `/remote-control` | 启用远程控制 | 远程访问 |
 | `/permissions` | 管理权限 | 控制访问 |
@@ -77,7 +79,7 @@
 | `/teleport` | 将会话转移到另一台机器 | 远程继续工作 |
 | `/desktop` | 打开 Claude Desktop 应用 | 切换桌面界面 |
 | `/theme` | 更改颜色主题 | 自定义外观 |
-| `/usage` | 显示 API 使用统计 | 监控配额和消耗 |
+| `/usage` | 显示 API 使用统计。在 **VSCode 扩展**（v2.1.174）中，`/usage`（Account & usage）对话框新增了归因明细 — 缓存未命中、长上下文成本、subagents，以及 24 小时和 7 天窗口内按 skill / agent / plugin / MCP 划分的用量 | 监控配额和消耗 |
 | `/fork` | 分叉当前对话 | 探索替代方案 |
 | `/stats` | 显示会话统计 | 查看会话指标 |
 | `/statusline` | 配置状态栏 | 自定义状态显示 |
@@ -116,7 +118,7 @@ Claude Code 提供 6 种权限模式，用来控制工具调用如何被授权�
 
 | 模式 | 说明 | 适用场景 |
 |------|-------------|-------------|
-| `default` | 每次工具调用都询问 | 标准交互式使用 |
+| `manual` | 每次工具调用都询问 | 标准交互式使用（v2.1.200 起由 `default` 更名；`default` 仍可用） |
 | `acceptEdits` | 自动接受文件编辑，其他情况仍询问 | 可信编辑工作流 |
 | `plan` | 只允许只读工具，不允许写入 | 规划与探索 |
 | `auto` | 所有操作，附带后台安全分类器检查 | 长任务、减少权限提示 |
@@ -132,6 +134,8 @@ Claude Code 提供 6 种权限模式，用来控制工具调用如何被授权�
 ## Subagents
 
 为特定任务准备的专门化 AI 助手，拥有隔离上下文。
+
+> **嵌套生成（v2.1.172）**：Subagents 可以生成自己的 subagents，最多嵌套 5 层。更早的版本不允许嵌套。参见 [04-subagents/README.md](04-subagents/README.md#restrict-spawnable-subagents) 中的 `Agent(agent_type)` 语法，它用于限制某个 subagent 可以生成哪些 subagents。
 
 ### 内置 Subagents
 
@@ -229,7 +233,7 @@ cp -r 03-skills/* ~/.claude/skills/
 
 | Skill | 说明 | 何时自动触发 |
 |-------|-------------|-------------------|
-| `/simplify` | 审查代码质量 | 写完代码后 |
+| `/simplify`*（自 v2.1.154 起再次独立）* | 仅做清理的审查（重用 / 简化 / 效率 / 抽象层级）并直接应用修复；不做 bug 排查 | 想整理代码而非排查 bug 时 |
 | `/batch` | 对多个文件运行提示词 | 批量操作 |
 | `/debug` | 调试失败的测试/错误 | 调试会话 |
 | `/loop` | 按间隔运行提示词 | 周期性任务 |
@@ -453,6 +457,8 @@ cp 02-memory/personal-CLAUDE.md ~/.claude/CLAUDE.md
 | **WebSocket MCP Transport** | 用 WebSocket 连接 MCP server | 在 MCP server 配置中使用 `"transport": "websocket"` |
 | **Plugin LSP Support** | 通过 plugins 集成 Language Server Protocol | 在 `plugin.json` 中配置 LSP servers，以获得编辑器能力 |
 | **Managed Drop-ins** | 组织管理的 drop-in 配置（v2.1.83） | 通过 managed policies 由管理员配置，自动应用到所有用户 |
+| **`claude plugin init`** | 在 `.claude/skills` 中脚手架式创建新插件；此类插件无需 marketplace 即自动加载（v2.1.157） | 运行 `claude plugin init <name>` |
+| **Bedrock/Vertex/Foundry 上的 Auto Mode** | 第三方提供商上对 Opus 4.7/4.8 可用的 auto mode — 需手动开启（v2.1.158） | 设置 `CLAUDE_CODE_ENABLE_AUTO_MODE=1` |
 
 ---
 
@@ -517,5 +523,5 @@ claude mcp add github -- npx -y @modelcontextprotocol/server-github
 
 ---
 
-**最后更新**: 2026 年 4 月 9 日
-**Claude Code 版本**: 2.1.97
+**最后更新**: 2026 年 7 月 18 日
+**Claude Code 版本**: 2.1.212

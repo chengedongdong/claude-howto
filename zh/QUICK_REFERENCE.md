@@ -92,17 +92,18 @@ chmod +x ~/.claude/hooks/*.sh
 /plan 任务描述
 
 # 权限模式（使用 --permission-mode 参数）
-# default          - 风险操作需要审批
+# manual           - 每个操作都需要审批（原名 "default"；"default" 仍可作为别名）
 # acceptEdits      - 自动接受文件编辑，其他操作仍需审批
 # plan             - 只读分析，不做修改
-# dontAsk          - 除危险操作外全部接受
 # auto             - 后台分类器自动决定权限
+# dontAsk          - 只运行预先批准的工具；其余一律拒绝
 # bypassPermissions - 全部接受（需要 --dangerously-skip-permissions）
 
 # 会话管理
-/resume                # 恢复之前的对话
+/resume                # 恢复之前的对话（不带参数 = 打开历史会话选择器）
 /rename "name"         # 命名当前会话
-/fork                  # 分叉当前会话
+/fork <directive>      # 生成一个继承当前对话的后台 subagent
+/branch [name]         # 切换到对话的一个副本，同时保留原对话
 claude -c              # 继续最近的对话
 claude -r "session"    # 按名称/ID 恢复会话
 ```
@@ -130,7 +131,7 @@ claude -r "session"    # 按名称/ID 恢复会话
 | **Git Worktrees** | 内置 | `/worktree` |
 | **Auto Memory** | 内置 | 自动保存到 `CLAUDE.md` |
 | **Task List** | 内置 | `/task list` |
-| **Bundled Skills（5 个）** | 内置 | `/simplify`、`/loop`、`/claude-api`、`/voice`、`/browse` |
+| **Bundled Skills（10 个）** | 内置 | `/batch`、`/claude-api`、`/code-review`、`/simplify`*（仅做清理的审查；自 v2.1.154 起再次与 `/code-review` 区分）*、`/debug`、`/fewer-permission-prompts`、`/loop`、`/run`*（v2.1.145+）*、`/run-skill-generator`*（v2.1.145+）*、`/verify`*（v2.1.145+）* |
 
 ---
 
@@ -382,11 +383,11 @@ cp -r 03-skills/code-review-specialist ~/.claude/skills/
 
 ---
 
-## 🆕 新功能（2026 年 3 月）
+## 🆕 功能亮点
 
 | 功能 | 说明 | 用法 |
 |------|------|------|
-| **Auto Mode** | 通过后台分类器实现完全自治 | `--enable-auto-mode` 参数，`Shift+Tab` 切换模式 |
+| **Auto Mode** | 通过后台分类器实现完全自治；自 v2.1.207 起在 Bedrock/Vertex/Foundry 上默认可用 | `Shift+Tab` 切换模式，或 `--permission-mode auto` |
 | **Channels** | Discord 和 Telegram 集成 | `--channels` 参数，Discord / Telegram bot |
 | **Voice Dictation** | 对 Claude 说出命令和上下文 | `/voice` 命令 |
 | **Hooks（25 个事件）** | 扩展后的 hook 系统，包含 4 类 | command、http、prompt、agent hook 类型 |
@@ -399,11 +400,15 @@ cp -r 03-skills/code-review-specialist ~/.claude/skills/
 | **Task List** | 管理后台任务 | `/task list`、`/task status <id>` |
 | **Auto Memory** | 从对话中自动保存记忆 | Claude 会自动保存关键上下文到 `CLAUDE.md` |
 | **Git Worktrees** | 用于并行开发的隔离工作区 | 使用 `/worktree` 创建隔离空间 |
-| **Model Selection** | 在 Sonnet 4.6 和 Opus 4.6 之间切换 | `/model` 或 `--model` 参数 |
+| **Model Selection** | 在 Sonnet 4.6、Opus 4.8 和 Haiku 4.5 之间切换 | `/model` — 自 v2.1.153 起所选模型会保存为新会话的默认值；按 `s` 仅对当前会话生效 |
 | **Agent Teams** | 协调多个 agent 执行任务 | 通过环境变量 `CLAUDE_AGENT_TEAMS=1` 启用 |
+| **Dynamic Workflows** *（v2.1.154）* | 确定性的多 agent 编排 | 用 `/workflows` 查看运行；让 Claude 创建一个即可 |
 | **Scheduled Tasks** | 使用 `/loop` 运行周期任务 | `/loop 5m /command` 或 CronCreate 工具 |
 | **Chrome Integration** | 浏览器自动化 | `--chrome` 参数或 `/chrome` 命令 |
 | **Keyboard Customization** | 自定义按键绑定 | `/keybindings` 命令 |
+| **Subagent Output Scanning** *（v2.1.210+）* | 扫描 subagent 报告中的提示注入模式并将其无效化 | 默认开启，无法关闭 |
+| **Session-Wide Spawn Caps** *（v2.1.212）* | 每会话 200 次的 WebSearch 调用与 subagent 生成上限，用于阻止失控循环 | `CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`、`CLAUDE_CODE_MAX_SUBAGENTS_PER_SESSION`；`/clear` 可重置 |
+| **Screen Reader Mode** *（v2.1.208）* | 面向屏幕阅读器的纯文本渲染模式 | `--ax-screen-reader` 参数、`CLAUDE_AX_SCREEN_READER=1`，或 settings 中的 `"axScreenReader": true` |
 
 ---
 

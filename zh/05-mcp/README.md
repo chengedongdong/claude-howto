@@ -45,9 +45,15 @@ Claude 会通过 MCP 协议向 server 发起工具调用，并把结果带回当
 # With environment variables
 ```
 
+stdio MCP server 还会收到 `CLAUDE_CODE_SESSION_ID` 环境变量（与传给 hooks 和 Bash 的值一致），包括通过 `--resume` 恢复会话时（v2.1.163+）。
+
 ### SSE 传输（已弃用）
 
 旧版本中可能仍能见到 SSE 方式，但新配置一般优先考虑 HTTP 或 stdio。
+
+### 会话工作目录（roots/list）
+
+MCP server 可以发现会话的工作目录：启动目录以及所有 `--add-dir`/`additionalDirectories` 条目会通过 MCP 的 `roots/list` 请求返回，目录集合变化时还会发送 `notifications/roots/list_changed` 通知（v2.1.203）。空闲超时现在同样适用于 stdio server（30 分钟），每个 server 的 `timeout` 会作为空闲下限（v2.1.203）。
 
 ### WebSocket 传输
 
@@ -60,6 +66,11 @@ Claude 会通过 MCP 协议向 server 发起工具调用，并把结果带回当
 ### OAuth 2.0 认证
 
 对于支持 OAuth 的 MCP server，Claude 可以通过交互式流程或预配置凭据完成认证。
+
+#### 认证启动提示与动态 Header 刷新（v2.1.193）
+
+- **启动认证提示（v2.1.193+）**：启动时，Claude Code 会显示一条提示，列出仍需认证的 MCP server，避免需要登录的 server 静默失效。
+- **`headersHelper` 自动刷新（v2.1.193+）**：如果你通过 `headersHelper` 提供自定义认证，当 server 返回 HTTP 401 或 403 时，helper 会被自动重新调用。凭据即时刷新，无需手动重连。参见 [Use dynamic headers for custom authentication](https://code.claude.com/docs/en/mcp)。
 
 ## MCP 设置流程
 
@@ -113,7 +124,7 @@ MCP 配置通常有不同作用域，例如项目级和用户级。
 
 ### 使用项目作用域
 
-适合把团队共享的 server 配置写进项目内。
+适合把团队共享的 server 配置写进项目内。团队成员首次使用项目级 MCP 时会看到批准提示。在未信任的工作区中，仓库通过提交的 `.claude/settings.json` 自行批准的 server **不会**被 `claude mcp list`/`get` 自动启动——它们会显示 `⏸ Pending approval`，直到你接受信任对话框；`enableAllProjectMcpServers` 在未信任目录中也会被忽略（v2.1.196）。
 
 ## MCP 配置管理
 
@@ -132,8 +143,14 @@ MCP 配置通常有不同作用域，例如项目级和用户级。
 
 # Reset project-specific approval choices
 
+# Authenticate an MCP server from the CLI (v2.1.186+)
+
+# Sign out of an MCP server (v2.1.186+)
+
 # Import from Claude Desktop
 ```
+
+`claude mcp login <name>` / `claude mcp logout <name>` 是 `/mcp` 菜单中 OAuth 流程的非交互式等价物——无需打开菜单即可完成认证或退出登录。给 `login` 加上 `--no-browser` 可以在 SSH 或 headless 会话中完成 OAuth（它会把流程重定向到 stdin）。
 
 ## 可用 MCP Server 表
 
@@ -218,6 +235,14 @@ MCP 一般遵循：
 
 ```bash
 # Increase the max output to 50,000 tokens
+```
+
+## 长时间运行的工具调用自动转入后台（v2.1.212）
+
+运行超过 2 分钟的 MCP 工具调用现在会自动转入后台，会话保持可用，不再被慢工具阻塞。阈值可以配置，行为也可以通过 `CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS` 调整或禁用：
+
+```bash
+# Change the auto-background threshold to 5 minutes (300,000ms)
 ```
 
 ## 用代码执行解决上下文膨胀

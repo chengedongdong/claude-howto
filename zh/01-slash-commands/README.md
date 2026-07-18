@@ -24,8 +24,10 @@ Claude Code 目前提供 55+ 个内置命令和 5 个内置 Skills。你可以�
 |---------|---------|
 | `/add-dir <path>` | 添加工作目录 |
 | `/agents` | 管理 agent 配置 |
-| `/branch [name]` | 将当前对话分支到新会话（别名：`/fork`。注意：`/fork` 在 v2.1.77 中更名为 `/branch`） |
+| `/branch [name]` | 切换到当前对话在此刻的一个副本，原对话保持不变（可用 `/resume` 回到原对话） |
+| `/fork <directive>` | 派生一个继承完整对话的后台 subagent，在你继续工作的同时执行该指令；在 `claude agents` 中有自己的条目 |
 | `/btw <question>` | 额外问题，不写入历史 |
+| `/cd <path>` | 将会话切换到新的工作目录，且不破坏 prompt cache（v2.1.169 新增） |
 | `/chrome` | 配置 Chrome 浏览器集成 |
 | `/clear` | 清空对话（别名：`/reset`、`/new`） |
 | `/color [color\|default]` | 设置提示栏颜色 |
@@ -36,13 +38,13 @@ Claude Code 目前提供 55+ 个内置命令和 5 个内置 Skills。你可以�
 | `/cost` | 查看 token 使用统计 |
 | `/desktop` | 继续在桌面应用中处理（别名：`/app`） |
 | `/diff` | 查看未提交更改的交互式 diff |
-| `/doctor` | 检查安装健康状态 |
-| `/effort [low\|medium\|high\|max\|auto]` | 设置推理强度；`max` 需要 Opus 4.6 |
+| `/doctor` | 诊断安装健康状态——可在 Claude 响应期间打开；显示状态图标；按 `f` 自动修复问题（v2.1.116 增强；v2.1.178 起改为图标更清晰的扁平树布局） |
+| `/effort [low\|medium\|high\|xhigh\|max\|auto]` | 通过交互式方向键滑块设置 effort 级别。级别：`low` → `medium` → `high` → `xhigh`（v2.1.111 新增）→ `max`。Opus 4.8 上默认为 `high`（Opus 4.7 上为 `xhigh`）；`xhigh` 需要 Opus 4.8 或 4.7；`max` 可用于 Opus 4.8/4.7/4.6 和 Sonnet 4.6。菜单中还提供 `ultracode`（并非模型 effort 级别——它会发送 `xhigh` 并让 Claude 编排 dynamic workflows；仅对当前会话生效） |
 | `/exit` | 退出 REPL（别名：`/quit`） |
 | `/export [filename]` | 将当前对话导出为文件或剪贴板内容 |
 | `/extra-usage` | 配置额外用量以应对速率限制 |
 | `/fast [on\|off]` | 切换快速模式 |
-| `/feedback` | 提交反馈（别名：`/bug`） |
+| `/feedback` | 提交反馈（别名：`/bug`）。自 v2.1.141 起可附上最近会话（最近 24 小时或 7 天），使跨多个会话的报告带上上下文。自 v2.1.178 起，`/bug` 必须填写描述后才能提交 |
 | `/help` | 显示帮助 |
 | `/hooks` | 查看 hook 配置 |
 | `/ide` | 管理 IDE 集成 |
@@ -56,7 +58,7 @@ Claude Code 目前提供 55+ 个内置命令和 5 个内置 Skills。你可以�
 | `/mcp` | 管理 MCP servers 和 OAuth |
 | `/memory` | 编辑 `CLAUDE.md`，切换自动记忆 |
 | `/mobile` | 生成移动端扫码二维码（别名：`/ios`、`/android`） |
-| `/model [model]` | 选择模型，并可用左右箭头调整 effort |
+| `/model [model]` | 选择模型，并可用左右箭头调整 effort。自 v2.1.153 起，所选模型会**保存为新会话的默认值**（与 IDE 行为一致）；选择后按 `s` 可仅应用于当前会话。（快捷键 `modelPicker:setAsDefault` 已更名为 `modelPicker:thisSessionOnly`；原来的 `d` 操作现在是 `s`） |
 | `/passes` | 分享一周免费 Claude Code 使用权 |
 | `/permissions` | 查看或更新权限（别名：`/allowed-tools`） |
 | `/plan [description]` | 进入规划模式 |
@@ -65,11 +67,12 @@ Claude Code 目前提供 55+ 个内置命令和 5 个内置 Skills。你可以�
 | `/privacy-settings` | 隐私设置（仅 Pro/Max） |
 | `/release-notes` | 查看更新日志 |
 | `/reload-plugins` | 重新加载当前插件 |
+| `/reload-skills` | 重新扫描 skill 目录，无需重启会话（v2.1.152 新增） |
 | `/remote-control` | 从 claude.ai 进行远程控制（别名：`/rc`） |
 | `/remote-env` | 配置默认远程环境 |
 | `/rename [name]` | 重命名会话 |
 | `/resume [session]` | 恢复对话（别名：`/continue`） |
-| `/review` | **已弃用**，请改用 `code-review` 插件 |
+| `/review <pr>` | 审查 GitHub PR。自 v2.1.186 起与 `/code-review medium` 使用同一审查引擎。审查本地工作区 diff 请用 `/code-review` |
 | `/rewind` | 回退对话和/或代码（别名：`/checkpoint`） |
 | `/sandbox` | 切换沙盒模式 |
 | `/schedule [description]` | 创建/管理定时任务 |
@@ -82,6 +85,9 @@ Claude Code 目前提供 55+ 个内置命令和 5 个内置 Skills。你可以�
 | `/terminal-setup` | 配置终端快捷键 |
 | `/theme` | 更改颜色主题 |
 | `/voice` | 切换按住说话语音输入 |
+| `/workflows` | 查看运行中和已完成的 dynamic workflow 运行记录（v2.1.154 新增）。参见 [Dynamic Workflows](../09-advanced-features/README.md#dynamic-workflows) |
+
+> **为什么 `/cd` 重要：** 过去切换目录会丢失缓存热度（导致下一轮更慢、更贵）；`/cd` 在切换时会保留 prompt cache。
 
 ### 内置 Skills
 
@@ -91,31 +97,36 @@ Claude Code 目前提供 55+ 个内置命令和 5 个内置 Skills。你可以�
 |-------|---------|
 | `/batch <instruction>` | 使用 worktree 编排大规模并行修改 |
 | `/claude-api` | 加载 Claude API 参考，便于为项目所用语言编写代码 |
+| `/dataviz` | 图表与仪表盘设计指导，附带可运行的配色校验器（v2.1.198） |
 | `/debug [description]` | 启用调试日志 |
 | `/loop [interval] <prompt>` | 按固定间隔重复运行提示词 |
-| `/simplify [focus]` | 审查改动文件的代码质量 |
+| `/code-review [effort]` | 以指定 effort 级别审查当前 diff 中的正确性 bug（例如 `/code-review high`）。最初在 v2.1.146 中并入了 `/simplify`，但 `/simplify` 在 v2.1.154 中重新成为独立命令 |
+| `/simplify` | 运行仅做清理的审查（复用 / 简化 / 效率 / 抽象层级）并应用修复；**不**查找 bug——找 bug 请用 `/code-review`。曾短暂作为 `/code-review --fix` 的别名（v2.1.152），v2.1.154 起变为仅做清理 |
 
 ### 已弃用命令
 
 | 命令 | 状态 |
 |---------|--------|
-| `/review` | 已弃用，已被 `code-review` 插件替代 |
 | `/output-style` | 自 v2.1.73 起弃用 |
-| `/fork` | 已重命名为 `/branch`（别名仍可用，v2.1.77） |
 | `/vim` | 自 v2.1.92 起移除；改用 `/config → Editor mode` |
 
 ### 最近变化
 
-- `/fork` 已更名为 `/branch`，但保留 `/fork` 作为别名（v2.1.77）
+- `/fork` 从 v2.1.77 起曾是 `/branch` 的别名，直到 v2.1.161 二者成为不同命令：`/fork` 现在会派生一个继承对话的后台 subagent，而 `/branch` 则让你就地切换到对话的一个副本中
+- 不带参数的 `/resume` 会打开历史会话选择器——包括已从可见列表移除的会话——并将所选会话作为后台会话恢复（v2.1.212）
 - `/output-style` 已弃用（v2.1.73）
-- `/review` 已弃用，推荐改用 `code-review` 插件
-- 新增 `/effort`，其中 `max` 级别需要 Opus 4.6
+- `/review <pr>` 现在与 `/code-review medium` 使用同一审查引擎（v2.1.186）
+- 新增 `/effort`；`max` 级别可用于 Opus 4.6 及以上（最初仅限 Opus 4.6）
 - 新增 `/voice`，用于按住说话语音输入
 - 新增 `/schedule`，用于创建和管理定时任务
 - 新增 `/color`，用于自定义提示栏颜色
 - `/model` 选择器现在显示人类可读标签，例如 “Sonnet 4.6”
 - `/resume` 支持 `/continue` 别名
 - MCP prompts 可作为 `/mcp__<server>__<prompt>` 命令使用，见 [MCP Prompts as Commands](#mcp-prompts-作为命令)
+- 新增 `/reload-skills`——重新扫描 skill 目录，无需重启会话（v2.1.152）
+- `/model` 现在会把所选模型保存为新会话的默认值；按 `s` 仅应用于当前会话（快捷键 `modelPicker:setAsDefault` → `modelPicker:thisSessionOnly`）（v2.1.153）
+- 新增 `/workflows`——查看运行中和已完成的 dynamic workflow 运行记录（v2.1.154）
+- `/simplify` 重新成为独立的、仅做清理的审查命令（复用 / 简化 / 效率 / 抽象层级），与 `/code-review` 的 bug 排查分开（v2.1.154）
 
 ## 自定义命令（现已归入 Skills）
 
@@ -219,6 +230,8 @@ description: 按优先级审查 PR
 ```
 
 调用 `/review-pr 456 high` 时，`$0="456"`，`$1="high"`。
+
+`${CLAUDE_PROJECT_DIR}` 会解析为项目根目录的绝对路径（v2.1.196）。
 
 ### 用 Shell 命令注入动态上下文
 
@@ -548,8 +561,8 @@ allowed-tools: Bash(npm *), Bash(git *)
 
 ---
 
-**最后更新**: 2026 年 4 月 9 日
-**Claude Code 版本**: 2.1.97
+**最后更新**: 2026 年 7 月 18 日
+**Claude Code 版本**: 2.1.212
 
 ---
 

@@ -369,7 +369,7 @@ cp 04-subagents/*.md .claude/agents/
 
 #### 你将完成什么
 ✅ 为复杂功能使用 planning mode
-✅ 用 6 种模式进行细粒度权限控制（default、acceptEdits、plan、auto、dontAsk、bypassPermissions）
+✅ 用 6 种模式进行细粒度权限控制（manual — 原名 default、acceptEdits、plan、auto、dontAsk、bypassPermissions）
 ✅ 用 Alt+T / Option+T 切换 extended thinking
 ✅ 管理后台任务
 ✅ 使用 Auto Memory 记住偏好
@@ -385,7 +385,7 @@ cp 04-subagents/*.md .claude/agents/
 # 练习 1：使用 planning mode
 /plan Implement user authentication system
 
-# 练习 2：尝试权限模式（共有 6 种：default、acceptEdits、plan、auto、dontAsk、bypassPermissions）
+# 练习 2：尝试权限模式（共有 6 种：manual［原名 default］、acceptEdits、plan、auto、dontAsk、bypassPermissions）
 claude --permission-mode plan "analyze this codebase"
 claude --permission-mode acceptEdits "refactor the auth module"
 claude --permission-mode auto "implement the feature"
@@ -716,7 +716,7 @@ done
 
 ---
 
-**最后更新**：2026 年 3 月
+**最后更新**：2026 年 7 月 11 日
 **维护者**：Claude How-To Contributors
 **许可证**：仅供学习与参考，免费使用和改编
 

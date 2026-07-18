@@ -22,12 +22,12 @@ Hooks 是事件驱动的自动化机制。它们会在 Claude Code 发生某些�
 
 ## Hook 类型
 
-Claude Code 提供 4 类、25 个事件：
+Claude Code 提供 4 类、26 个事件：
 
 - **Tool Hooks**：`PreToolUse`、`PostToolUse`、`PostToolUseFailure`、`PermissionRequest`
 - **Session Hooks**：`SessionStart`、`SessionEnd`、`Stop`、`StopFailure`、`SubagentStart`、`SubagentStop`
 - **Task Hooks**：`UserPromptSubmit`、`TaskCompleted`、`TaskCreated`、`TeammateIdle`
-- **Lifecycle Hooks**：`ConfigChange`、`CwdChanged`、`FileChanged`、`PreCompact`、`PostCompact`、`WorktreeCreate`、`WorktreeRemove`、`Notification`、`InstructionsLoaded`、`Elicitation`、`ElicitationResult`
+- **Lifecycle Hooks**：`ConfigChange`、`CwdChanged`、`FileChanged`、`PreCompact`、`PostCompact`、`WorktreeCreate`、`WorktreeRemove`、`Notification`、`MessageDisplay`（v2.1.152，转换或隐藏显示的消息文本）、`InstructionsLoaded`、`Elicitation`、`ElicitationResult`
 
 ## 安装
 
@@ -53,6 +53,10 @@ chmod +x ~/.claude/hooks/*.sh
   }
 }
 ```
+
+`matcher` 除了精确字符串、正则和通配符外，还支持逗号分隔列表（如 `"Write,Edit"`，匹配列表中任意工具，v2.1.191+）；从 v2.1.195 起 matcher 按精确匹配处理，带连字符的标识符（例如含连字符的 MCP 工具名）不会再意外子串匹配到其他工具。
+
+`matcher` 按**工具名**选择 hook；如需按工具**参数**进一步过滤，可以在单个 hook 处理器上添加 `if` 条件（与 `type`、`command` 同级）。`if` 使用[权限规则语法](https://code.claude.com/docs/en/permissions)（`ToolName(pattern)`），例如 `Edit(src/**)`（只在编辑 `src/` 下的文件时运行）、`Read(.env)`（守护对 `.env` 的读取）、`Read(~/.ssh/**)`、`Bash(git push *)`（只匹配 `git push` 子命令）。
 
 ## 使用方法
 

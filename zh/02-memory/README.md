@@ -15,7 +15,7 @@ Memory 让 Claude Code 在不同会话之间保留上下文。你可以把团队
 |------|------|
 | `/init` | 初始化项目级 `CLAUDE.md` |
 | `/memory` | 打开并编辑记忆文件 |
-| `#` | 快速把当前规则写入 memory |
+| `#` | ~~快速把当前规则写入 memory~~ **已停用**——改用 `/memory` 或直接对话让 Claude 记住 |
 
 ## 快速上手：初始化 Memory
 
@@ -35,18 +35,9 @@ Claude 会根据当前项目生成一个 `CLAUDE.md`，通常包含类似如下�
 ## 开发规范
 ```
 
-### 使用 `#` 快速更新记忆
+### 快速更新记忆
 
-当你想把一句规则写入 memory 时，可以直接在输入前加 `#`：
-
-```text
-# 这个项目始终使用 TypeScript 严格模式
-# 优先使用 async/await，而不是 promise 链
-# 每次提交前都运行 npm test
-# 文件名统一使用 kebab-case
-```
-
-这会把规则加入当前会话能感知到的记忆中。
+> **注意**：用 `#` 前缀内联写入 memory 的快捷方式已停用。请改用 `/memory` 直接编辑记忆文件，或直接用对话让 Claude 记住（例如“记住这个项目始终使用 TypeScript 严格模式”）。
 
 ### 使用 `/memory`
 
@@ -61,7 +52,7 @@ Claude 会根据当前项目生成一个 `CLAUDE.md`，通常包含类似如下�
 
 ## Memory 架构
 
-Claude Code 的记忆系统通常有以下层级：
+Claude Code 有两套互补的记忆系统，都会在每次会话开始时加载并在会话中持续更新：**CLAUDE.md 文件**（你来写）和 **auto memory**（Claude 自己写）。CLAUDE.md 常见的作用范围如下：
 
 | 层级 | 作用范围 | 典型内容 |
 |------|----------|----------|
@@ -72,11 +63,14 @@ Claude Code 的记忆系统通常有以下层级：
 
 ## 记忆层级
 
-Claude 会按更接近当前上下文的规则优先使用更具体的 memory。一般来说：
+CLAUDE.md 文件会按顺序**拼接进上下文，而不是相互覆盖**——不存在高层替换低层的严格优先级链。加载顺序从最宽泛到最具体：
 
-- 组织级规则优先于普通偏好
-- 项目规则优先于个人偏好
-- 目录级规则优先于项目级通用规则
+1. 受管策略（组织级，最先加载）
+2. 用户记忆（`~/.claude/CLAUDE.md`）
+3. 项目记忆（`./CLAUDE.md` 或 `./.claude/CLAUDE.md`）
+4. 本地项目记忆（`./CLAUDE.local.md`，最后加载）
+
+排在后面的文件只是出现在上下文更靠后的位置，并不会“取代”前面的内容。Auto memory（`~/.claude/projects/<project>/memory/`）是独立机制，不参与上述拼接顺序。
 
 ## 排除规则
 
@@ -84,12 +78,15 @@ Claude 会按更接近当前上下文的规则优先使用更具体的 memory。
 
 ## 配置文件层级
 
-项目设置、用户设置和企业托管设置会共同影响 memory 的加载方式。你可以把它理解为：
+与 CLAUDE.md 的拼接不同，设置（settings）是真正按优先级覆盖的：同一设置出现在多个范围时，层级更高者生效。
 
-1. 组织策略
-2. 项目设置
-3. 本地设置
-4. 临时会话输入
+1. 受管策略设置（最高，不可被覆盖）
+2. 命令行参数
+3. 本地设置（`.claude/settings.local.json`）
+4. 项目设置（`.claude/settings.json`）
+5. 用户设置（`~/.claude/settings.json`，最低）
+
+权限规则（`allow`/`ask`/`deny`）是例外：它们会跨范围合并，而不是由高层直接覆盖低层。
 
 ## 模块化规则系统
 
@@ -225,10 +222,9 @@ Subagents 也可以拥有自己的记忆范围，用于在各自职责内保持�
 
 ### 示例 4：会话中更新记忆
 
-两种常见方式：
+直接用对话提出要求，让 Claude 把规则写进 memory（例如“记住我更喜欢用 React hooks 而不是 class 组件”）。
 
-1. 直接提要求，让 Claude 把规则写进 memory
-2. 使用 `# new rule into memory` 这种模式追加规则
+如需大量更新或重新组织，可用 `/memory` 直接编辑记忆文件。
 
 ## 最佳实践
 
@@ -265,14 +261,6 @@ Subagents 也可以拥有自己的记忆范围，用于在各自职责内保持�
 
 ```bash
 cp project-CLAUDE.md CLAUDE.md
-```
-
-#### 方法 3：快速更新
-
-```text
-# Use semantic versioning for all releases
-# Always run tests before committing
-# Prefer composition over inheritance
 ```
 
 ### 设置个人记忆

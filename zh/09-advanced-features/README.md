@@ -14,25 +14,26 @@
 3. [扩展思考](#扩展思考)
 4. [自动模式](#自动模式)
 5. [后台任务](#后台任务)
-6. [定时任务](#定时任务)
-7. [权限模式](#权限模式)
-8. [无头模式](#无头模式)
-9. [会话管理](#会话管理)
-10. [交互功能](#交互功能)
-11. [语音输入](#语音输入)
-12. [消息通道（Channels）](#消息通道channels)
-13. [Chrome 集成](#chrome-集成)
-14. [远程控制](#远程控制)
-15. [网页会话](#网页会话)
-16. [桌面应用](#桌面应用)
-17. [任务列表](#任务列表)
-18. [提示词建议](#提示词建议)
-19. [Git 工作树（Git Worktrees）](#git-工作树git-worktrees)
-20. [沙盒](#沙盒)
-21. [企业受管设置](#企业受管设置)
-22. [配置与设置](#配置与设置)
-23. [最佳实践](#最佳实践)
-24. [更多资源](#更多资源)
+6. [动态工作流（Dynamic Workflows）](#动态工作流dynamic-workflows)
+7. [定时任务](#定时任务)
+8. [权限模式](#权限模式)
+9. [无头模式](#无头模式)
+10. [会话管理](#会话管理)
+11. [交互功能](#交互功能)
+12. [语音输入](#语音输入)
+13. [消息通道（Channels）](#消息通道channels)
+14. [Chrome 集成](#chrome-集成)
+15. [远程控制](#远程控制)
+16. [网页会话](#网页会话)
+17. [桌面应用](#桌面应用)
+18. [任务列表](#任务列表)
+19. [提示词建议](#提示词建议)
+20. [Git 工作树（Git Worktrees）](#git-工作树git-worktrees)
+21. [沙盒](#沙盒)
+22. [企业受管设置](#企业受管设置)
+23. [配置与设置](#配置与设置)
+24. [最佳实践](#最佳实践)
+25. [更多资源](#更多资源)
 
 ---
 
@@ -46,7 +47,7 @@ Claude Code 的高级功能把基础能力扩展到了规划、推理、自动�
 - **Extended Thinking**：对复杂问题进行更深入的推理
 - **Auto Mode**：由后台安全分类器在每一步执行前进行审查
 - **Background Tasks**：长时间任务不阻塞对话
-- **Permission Modes**：控制 Claude 可以做什么（`default`、`acceptEdits`、`plan`、`auto`、`dontAsk`、`bypassPermissions`）
+- **Permission Modes**：控制 Claude 可以做什么（`manual`（原 `default`）、`acceptEdits`、`plan`、`auto`、`dontAsk`、`bypassPermissions`）
 - **Print Mode**：非交互式运行，适合自动化和 CI/CD（`claude -p`）
 - **Session Management**：管理多个会话
 - **Interactive Features**：快捷键、多行输入、历史记录
@@ -213,8 +214,8 @@ Extended thinking 让 Claude 在给出解决方案前，花更多时间进行复
 - `Option + T`（macOS）/ `Alt + T`（Windows/Linux）- 切换 extended thinking
 
 **自动启用：**
-- 对所有模型默认开启（Opus 4.6、Sonnet 4.6、Haiku 4.5）
-- Opus 4.6 支持自适应推理，effort 等级为 `low`（○）、`medium`（◐）、`high`（●）、`max`（仅 Opus 4.6）
+- 对所有模型默认开启（Opus 4.8、Opus 4.7、Sonnet 4.6、Haiku 4.5）
+- Opus 4.8 支持自适应推理，effort 等级为 `low`（○）、`medium`（◐）、`high`（●）、`xhigh`（Opus 4.8/4.7）、`max`。Opus 4.8 的默认等级是 `high`，Opus 4.7 默认 `xhigh`；`max` 仅对当前会话生效；Haiku 4.5 没有 effort 等级
 
 ### 好处
 
@@ -244,10 +245,12 @@ Recommendation
 }
 ```
 
+> **精简系统提示词（v2.1.154）**：精简版系统提示词现在对除 Haiku、Sonnet 和 Opus 4.7 及更早版本之外的所有模型**默认启用**，降低了 Opus 4.8 上的基础 token 开销。
+
 <a id="auto-mode"></a>
 ## 自动模式
 
-Auto mode 是一种权限模式，会在每个动作执行前用后台安全分类器评估风险，帮助你在自动化和安全之间取得平衡。所有套餐均可使用，但需要满足合格的模型和提供商条件。
+Auto mode 是一种权限模式，会在每个动作执行前用后台安全分类器评估风险，帮助你在自动化和安全之间取得平衡。所有套餐均可使用，但需要合格的模型（Anthropic API 和 AWS 上的 Claude Platform 为 Claude Opus 4.6+、Sonnet 4.6+ 或 Fable 5；Bedrock、Vertex、Foundry 及已登录的 Claude 应用 gateway 会话为 Sonnet 5、Opus 4.7、Opus 4.8 或 Fable 5）和提供商，Team/Enterprise 套餐还需要 Owner 开启。
 
 ### 需求
 
@@ -262,6 +265,10 @@ claude --enable-auto-mode
 
 # 然后在 REPL 中用 Shift+Tab 切换到它
 ```
+
+> **v2.1.158 更新**：Auto mode 开始支持 Bedrock、Vertex 和 Foundry 上的 Opus 4.7/4.8，但需要设置 `CLAUDE_CODE_ENABLE_AUTO_MODE=1` 才能启用。
+>
+> **v2.1.207 更新**：上述 opt-in 要求已移除。Auto mode 现在在 Bedrock、Vertex AI、Microsoft Foundry 以及已登录的 Claude 应用 gateway 会话中，对 Claude Sonnet 5、Opus 4.7、Opus 4.8 和 Fable 5 默认可用——不再需要任何 flag 或环境变量。管理员可以用受管设置中的 `disableAutoMode` 禁用它。`CLAUDE_CODE_ENABLE_AUTO_MODE` 出于兼容性仍会被接受，但从 v2.1.207 起不再有任何效果。
 
 ### 分类器如何工作
 
@@ -282,6 +289,37 @@ claude --enable-auto-mode
 ### 配置 Auto Mode
 
 Auto mode 可以在设置中进一步约束、放宽或与权限模式结合使用。
+
+**恢复默认的 auto-mode 配置**（v2.1.212），执行前会弹出确认提示（加 `--yes` 可跳过）：
+
+```bash
+claude auto-mode reset
+claude auto-mode reset --yes
+```
+
+#### 用 `autoMode.classifyAllShell` 分类所有 shell 命令（v2.1.193）
+
+`autoMode.classifyAllShell`（布尔值，v2.1.193+）会把**所有** Bash/PowerShell 命令都交给 auto-mode 分类器审查。如果你希望分类器检查会话中的每一条 shell 命令，就启用它。
+
+```json
+{
+  "autoMode": {
+    "classifyAllShell": true
+  }
+}
+```
+
+同一版本还加入了**拒绝原因**展示——当 auto mode 阻止某个动作时，可以在会话记录、拒绝提示以及 `/permissions` 下的最近拒绝列表中看到原因（v2.1.193+）。
+
+#### 内置的基于意图的保护（v2.1.183）
+
+与用户配置的 `hard_deny` 相互独立，auto mode 默认会阻止以下破坏性命令，除非你在本次会话中明确要求执行它们：
+
+- `git reset --hard`、`git checkout -- .`、`git clean -fd`、`git stash drop`
+- `git commit --amend`（当该 commit 不是 agent 在本次会话中创建时）
+- `terraform destroy`、`pulumi destroy`、`cdk destroy`（除非你明确要求销毁特定 stack）
+
+这是由推断意图驱动的内置默认保护——你不需要自己把这些命令加进 `hard_deny`。
 
 ### 回退行为
 
@@ -328,6 +366,29 @@ Auto mode 可以在设置中进一步约束、放宽或与权限模式结合使�
 ### 配置
 
 后台任务的超时、并发和通知行为都可以在设置中调整。
+
+<a id="dynamic-workflows"></a>
+## 动态工作流（Dynamic Workflows）
+
+> **v2.1.154 新增**
+
+动态工作流让 Claude 能够**确定性地**编排数十到数百个后台 [subagents](../04-subagents/README.md)——fan-out、流水线和并行阶段都写在编排脚本里，而不是靠模型即兴发挥。单个 agent 只有一个上下文窗口，而工作流可以把任务分解给多个 agent，再把它们的结果重新组合起来。
+
+### 什么时候使用
+
+- **全面覆盖**——并行地对大量文件/维度做审计或审查。
+- **提高置信度**——生成多个独立视角，再对发现进行对抗式验证后才落地。
+- **超出单个上下文的规模**——大型迁移、大范围排查，或任何单个上下文装不下的研究。
+
+对于你已经理解的一次性任务，单个 agent（或直接编辑）仍然是正确的工具——工作流只有在工作需要扇出时才划算。
+
+### 启动与查看
+
+- **启动**：让 Claude 为任务创建一个工作流（例如 "run a workflow to review every file in `src/`"）。Claude 会编写编排脚本并在后台运行。
+- **查看**：`/workflows` 命令展示正在运行和已完成的工作流及其实时进度。
+- **`ultracode`**：在 `/effort` 菜单中选择 `ultracode` 会在本次会话中开启它——既向模型发送 `xhigh`，又让 Claude 默认编排动态工作流。它只对当前会话生效，不能写进 settings 文件。（自 v2.1.160 起触发关键词是 `ultracode`，单独的 "workflow" 一词不再触发运行。）
+
+工作流建立在 subagent 模型之上——单个 agent 如何定义和限定范围，见 [Subagents](../04-subagents/README.md)。
 
 <a id="scheduled-tasks"></a>
 ## 定时任务
@@ -381,20 +442,24 @@ Permission modes 决定 Claude 可以直接执行哪些操作。
 
 ### 可用模式
 
-- `default`
+- `manual`（v2.1.200 起由 `default` 改名，`default` 仍可作为别名）
 - `acceptEdits`
 - `plan`
 - `auto`
 - `dontAsk`
 - `bypassPermissions`
 
+> **注意**：交互式默认模式在 v2.1.200 中从 `default` 改名为 **Manual**（CLI、`--help`、VS Code 和 JetBrains 全部同步），并且从 v2.1.203 起它处于激活状态时页脚会显示灰色 ⏸ 标记。`--permission-mode manual` 和 `--permission-mode default` 都可用，settings 中的 `"defaultMode": "manual"` 和 `"defaultMode": "default"` 也一样。
+
 ### 启用方式
 
 可以通过命令行、设置或会话中的快捷操作切换权限模式。
 
+自 v2.1.160 起，即使在 `acceptEdits` 模式下，写入 shell 启动文件（`.zshenv`、`.zlogin`、`.bash_login`、`~/.config/git/`）和会执行代码的构建配置（`.npmrc`、`.yarnrc*`、`bunfig.toml`、`.bazelrc`、`.pre-commit-config.yaml`、`.devcontainer/` 等）之前也会先询问，否则这些写入可能导致意外的命令执行。
+
 ### 示例
 
-#### Default Mode
+#### Manual Mode（原 Default Mode）
 
 默认的平衡模式，必要时会询问权限。
 
@@ -461,6 +526,20 @@ echo "hello" | claude -p "translate to Chinese"
 - 启用 schema 验证
 - 禁用会话持久化
 
+### Safe Mode（排障）
+
+`--safe-mode`（以及环境变量 `CLAUDE_CODE_SAFE_MODE`，例如 `CLAUDE_CODE_SAFE_MODE=1`）会以**禁用全部自定义配置**的方式启动 Claude Code——CLAUDE.md、插件、skills、hooks 和 MCP servers 全部关闭。
+
+```bash
+# 以禁用所有自定义配置的方式启动
+claude --safe-mode
+
+# 等价的环境变量写法
+CLAUDE_CODE_SAFE_MODE=1 claude
+```
+
+它是一个排障工具：当某个自定义配置引发问题时，用 safe mode 启动，就能判断问题出在你的配置还是 Claude Code 本身。
+
 <a id="session-management"></a>
 ## 会话管理
 
@@ -470,7 +549,8 @@ echo "hello" | claude -p "translate to Chinese"
 
 - `/resume`
 - `/rename`
-- `/fork`
+- `/fork <directive>` - 派生一个继承完整对话的后台 subagent 去执行指令，你可以继续当前会话
+- `/branch [name]` - 切换到对话在此刻的一个副本，原会话保持不变
 - `claude -c`
 - `claude -r`
 
@@ -484,7 +564,25 @@ claude -c
 claude -r "feature-auth"
 ```
 
-### 分叉会话
+> **v2.1.212 更新**：在 agent 视图中输入不带参数的 `/resume`，现在会打开一个历史会话选择器——包括已从可见列表中移除的会话——并把选中的会话作为后台会话恢复。
+
+### 分叉与分支会话
+
+`/fork <directive>` 会派生一个继承完整对话的后台 subagent，在你继续当前会话的同时处理该指令——它在 `claude agents` 中有自己的一行，完成后结果会返回到你的对话中：
+
+```text
+/fork Investigate why the auth tests are flaky
+```
+
+如果你想自己切换到对话在此刻的一个副本，而不是委派给后台 subagent，就用 `/branch [name]`——它会保留原会话，之后可以用 `/resume` 回去：
+
+```text
+/branch try-oauth-instead
+```
+
+> **注意**：在 v2.1.161 之前，`/fork` 只是 `/branch` 的别名。自 v2.1.161 起两者是不同的命令：`/fork` 委派给后台 subagent，`/branch` 让你就地切换到一个副本。
+
+也可以从 CLI 分叉：
 
 ```bash
 # 恢复并分叉，适合实验
@@ -503,6 +601,24 @@ claude -r "feature-auth" --fork
 ### 快捷键
 
 常用快捷键用于切换模式、编辑输入、查看历史和控制输出。
+
+### 无障碍（Accessibility）
+
+屏幕阅读器模式（v2.1.208+）会把 CLI 切换为专为屏幕阅读器设计的纯文本渲染模式。可以通过 CLI flag、环境变量或 settings 键启用：
+
+```bash
+claude --ax-screen-reader
+```
+
+```bash
+export CLAUDE_AX_SCREEN_READER=1
+```
+
+```json
+{
+  "axScreenReader": true
+}
+```
 
 ### 自定义快捷键
 
@@ -547,6 +663,10 @@ Claude 会保留历史记录，方便你快速重用之前的输入。
 ### Bash 模式
 
 可在会话中直接进入更偏 shell 风格的操作方式。
+
+**自 v2.1.193 起**：bash 模式（`!`）支持文件路径实时补全，输入 shell 命令时不用离开提示符就能补全路径。
+
+**自 v2.1.186 起**：`!` 命令的输出现在会自动发送给 Claude，并由它作出回应。如果想保留以前只把输出加入上下文而不回应的行为，在 `settings.json` 中设置 `"respondToBashCommands": false`。
 
 <a id="voice-dictation"></a>
 ## 语音输入
@@ -775,6 +895,8 @@ claude -w
 
 worktree 场景下依然可以配合工具和 hooks 自动化流程。
 
+自 v2.1.157 起，`EnterWorktree` 工具可以在会话中途在 Claude 管理的多个 worktree 之间切换；agent 结束后，Claude 管理的 worktree 会保持未加锁状态，因此 `git worktree remove`/`prune` 可以清理它们。
+
 ### 自动清理
 
 不需要的 worktree 可以自动清理。
@@ -797,6 +919,8 @@ worktree 场景下依然可以配合工具和 hooks 自动化流程。
 ### 配置项
 
 你可以配置允许访问的目录、网络行为和例外列表。
+
+自 v2.1.187 起，`sandbox.credentials` 可以阻止沙盒内的命令读取凭据文件和涉密环境变量；macOS 上还可以用 `sandbox.allowAppleEvents`（v2.1.181+）选择允许沙盒命令发送 Apple Events。
 
 ### 示例配置
 
@@ -838,6 +962,7 @@ worktree 场景下依然可以配合工具和 hooks 自动化流程。
 - 权限模式
 - 功能开关
 - MCP / hooks / 插件约束
+- `enforceAvailableModels`（v2.1.175）：为 `true` 时，`availableModels` 白名单也会约束**默认**模型——如果配置的默认模型不在名单内，Claude Code 会回退到第一个允许的模型；用户和项目设置无法再扩大受管的 `availableModels` 列表
 
 ### macOS plist 示例
 
@@ -868,6 +993,25 @@ worktree 场景下依然可以配合工具和 hooks 自动化流程。
   "autoCheckpoint": true
 }
 ```
+
+### 其他用户级设置
+
+以下键写在 `~/.claude/settings.json`（或项目的 `.claude/settings.json`）中，控制单个用户的交互行为：
+
+- `askUserQuestionTimeout`：让未回应的 `AskUserQuestion` 对话框在空闲一段时间后自动继续。自 **v2.1.200** 起对话框默认不再自动继续——设置此项可重新启用定时自动继续。
+- `enableArtifact`：按用户启用/禁用 Artifact 工具（v2.1.196）。
+
+### 备选模型（`fallbackModel`）
+
+`fallbackModel` 设置最多可以配置**三个**备选模型，当主模型过载或不可用时按顺序尝试：
+
+```json
+{
+  "fallbackModel": ["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"]
+}
+```
+
+自 **v2.1.166** 起，`--fallback-model` flag 也适用于交互式会话（不再只限 headless）。发生 fallback 时，Claude Code 会对意外的不可重试错误重试一次；认证、限流、请求大小和传输类错误仍会立即失败。
 
 ### 环境变量
 
@@ -908,9 +1052,23 @@ worktree 场景下依然可以配合工具和 hooks 自动化流程。
 
 - `CLAUDE_OUTPUT_FORMAT`
 
+#### 会话上限与无障碍
+
+- `CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`（v2.1.212）：每个会话的 WebSearch 调用次数上限，用于阻止失控的搜索循环，默认 200
+- `CLAUDE_AX_SCREEN_READER`（v2.1.208）：启用纯文本屏幕阅读器渲染模式，效果等同于 `--ax-screen-reader` 或 settings 中的 `"axScreenReader": true`
+
 ### 配置管理命令
 
 你可以用命令查看或更新当前配置，并把它们落到 settings 中。
+
+在交互式菜单（`/config`）中，按 Enter 或空格修改选中的设置，按 Esc 保存并关闭（v2.1.183+）。你也可以不打开菜单，直接在提示符里设置单个配置项：
+
+```bash
+/config thinking=false      # 直接设置单个配置项（v2.1.181+）
+/config --help              # 列出可用的简写键（v2.1.183+）
+```
+
+`key=value` 简写在交互式会话、`-p` 模式和 Remote Control 中都可用。
 
 ### 每个项目的配置
 

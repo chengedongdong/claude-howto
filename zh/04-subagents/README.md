@@ -21,6 +21,8 @@ Subagents 是专门处理某类任务的独立 AI 助手。它们拥有隔离的
 - 项目级：`.claude/agents/`
 - 用户级：`~/.claude/agents/`
 
+> **嵌套 `.claude/` 优先级（v2.1.178）**：同名 agent 出现在多个嵌套的 `.claude/agents/` 目录（例如 monorepo 中包级的 `.claude/` 文件夹）中时，**离当前工作目录最近的定义生效**。嵌套的 workflow 和 output-style 定义遵循同样的就近规则。
+
 ## 配置
 
 ### 文件格式
@@ -71,11 +73,17 @@ Claude Code 自带一些常见角色，例如：
 
 ## 管理 Subagents
 
-### 使用 `/agents` 命令（推荐）
+### 让 Claude 帮你创建（推荐）
 
-```bash
-/agents
+创建或管理 subagent 最简单的方式是直接让 Claude 来做：
+
+```text
+创建一个负责审查代码安全漏洞的 subagent。
 ```
+
+Claude 会为你写好 `.claude/agents/<name>.md` 文件，并选择合理的 frontmatter（tools、model、description）。之后你可以手动微调，或继续让 Claude 修改。
+
+> **注意**：`/agents` 命令已不再提供交互式创建向导（v2.1.198 移除）。请让 Claude 创建，或直接编辑 `.claude/agents/` 下的文件。
 
 ### 直接管理文件
 
@@ -143,9 +151,11 @@ Subagent 会在自己的上下文中读取对应记忆，不和主会话完全�
 
 ## 后台 Subagents
 
+从 v2.1.198 起，subagent 默认就在后台运行：主会话可以继续工作，subagent 完成后会收到通知，不再需要等它返回。
+
 ### 配置
 
-有些 subagent 可以作为后台任务执行，不阻塞主会话。
+由于后台已是默认行为，在 frontmatter 中设置 `background: true` 的作用是*强制*该 subagent 始终后台运行，不允许内联执行。
 
 ### 快捷键
 
@@ -238,6 +248,18 @@ agent team 本质上是多个专门角色围绕同一任务协作。
 
 插件分发的 subagent 要特别注意权限、工具范围和边界条件。
 
+### Subagent 输出扫描（v2.1.210+）
+
+从 v2.1.210 起，Claude Code 会扫描每个 subagent 的最终报告，识别伪装成系统输出格式的文本——伪造的 `<system-reminder>` 风格标签、虚构的 `Human:`/`Assistant:` 对话轮次，或提及权限绕过参数和设置文件路径的内容。这能防御藏在 subagent 输出里的 prompt 注入（例如 subagent 抓取了含伪造控制标记的恶意网页）。扫描命中时，Claude Code 会做无害化处理并插入行内标记；主会话应把被标记的文本当作需要转述的发现，而不是要执行的指令。扫描默认开启，倾向于宁可误报也不放过注入。
+
+### 会话级 Subagent 数量上限（v2.1.212+）
+
+Claude Code 默认每个会话最多 spawn **200 个 subagent**，用于阻止失控的委派循环。可用 `CLAUDE_CODE_MAX_SUBAGENTS_PER_SESSION` 环境变量覆盖；运行 `/clear` 后额度会重置。
+
+```bash
+export CLAUDE_CODE_MAX_SUBAGENTS_PER_SESSION=200
+```
+
 ## 架构
 
 ### 高层架构
@@ -266,7 +288,7 @@ agent team 本质上是多个专门角色围绕同一任务协作。
 
 ### 关键行为
 
-subagent 在隔离上下文里工作，但仍能把结果汇总回主会话。
+subagent 在隔离上下文里工作，但仍能把结果汇总回主会话。从 v2.1.172 起，subagent 还可以继续 spawn 自己的 subagent，最多嵌套 5 层（此前完全不允许嵌套）；从 v2.1.198 起，subagent 和上下文压缩会继承会话的 extended thinking 配置。
 
 ## 什么时候使用 Subagents
 
@@ -331,11 +353,16 @@ subagent 在隔离上下文里工作，但仍能把结果汇总回主会话。
 
 ## 安装说明
 
-### 方法 1：使用 `/agents`
+### 方法 1：让 Claude 创建
 
-```bash
-/agents
+描述你想要的 subagent，让 Claude 直接生成文件：
+
+```text
+创建一个项目级 subagent，负责运行测试并修复失败。
+给它 Bash、Read、Edit 和 Grep 工具权限。
 ```
+
+Claude 会写好带合适 frontmatter 的 `.claude/agents/<name>.md`，检查生成的文件后即可使用。（`/agents` 交互式创建向导已在 v2.1.198 移除，请让 Claude 创建或直接编辑文件。）
 
 ### 方法 2：复制到项目
 
@@ -353,8 +380,8 @@ cp 04-subagents/*.md ~/.claude/agents/
 
 ### 验证
 
-- 运行 `/agents`
-- 检查对应 agent 是否出现在列表中
+- 运行 `ls .claude/agents/` 确认文件已就位
+- 直接问 Claude 当前会话有哪些可用的 subagent，它会报告内置和自定义的 agent
 - 试着让 Claude 委派一个简单任务
 
 ## 文件结构
